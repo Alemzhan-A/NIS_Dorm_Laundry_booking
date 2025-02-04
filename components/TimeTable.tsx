@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { addMinutes, format,  subDays, isSameDay } from "date-fns";
+import { addMinutes, format, subDays, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
   Select,
@@ -52,8 +52,6 @@ interface Booking {
   color: string;
 }
 
-
-
 export function TimeTable() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedMode, setSelectedMode] = useState<keyof typeof WASH_MODES>("quick");
@@ -68,6 +66,24 @@ export function TimeTable() {
   const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday' | 'twoDaysAgo'>('today');
   const [currentTime, setCurrentTime] = useState(getKazakhstanTime());
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+
+  // Загружаем бронирования из localStorage при монтировании
+  useEffect(() => {
+    const savedBookings = localStorage.getItem('bookings');
+    if (savedBookings) {
+      const parsedBookings = JSON.parse(savedBookings).map((booking: any) => ({
+        ...booking,
+        startTime: new Date(booking.startTime),
+        endTime: new Date(booking.endTime)
+      }));
+      setBookings(parsedBookings);
+    }
+  }, []);
+
+  // Сохраняем бронирования в localStorage при изменении
+  useEffect(() => {
+    localStorage.setItem('bookings', JSON.stringify(bookings));
+  }, [bookings]);
 
   // Обновляем текущее время каждую минуту
   useEffect(() => {
@@ -84,7 +100,6 @@ export function TimeTable() {
 
   const rooms = Array.from({ length: 12 }, (_, i) => (301 + i).toString());
   const beds = Array.from({ length: 4 }, (_, i) => (i + 1).toString());
-
 
   const getDateBySelection = (selection: typeof selectedDate) => {
     switch (selection) {
@@ -229,8 +244,6 @@ export function TimeTable() {
       isSameDay(booking.startTime, yesterday)
     )
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-  
 
   return (
     <div className="space-y-8 relative min-h-screen">
@@ -460,7 +473,7 @@ export function TimeTable() {
       </div>
 
       {/* Мобильная версия */}
-      <div className="md:hidden relative min-h-screen">
+      <div className="md:hidden">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -562,6 +575,9 @@ export function TimeTable() {
           </div>
         </div>
 
+        {/* Добавляем отступ снизу для прокрутки */}
+        <div className="h-[70vh]" />
+
         {/* Плавающая кнопка */}
         <AnimatePresence>
           {!isBookingFormOpen && (
@@ -569,13 +585,15 @@ export function TimeTable() {
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              className="fixed bottom-6 right-6 z-50"
+              className="fixed bottom-6 right-6 z-[100]"
+              style={{ pointerEvents: "none" }}
             >
               <motion.button
                 onClick={() => setIsBookingFormOpen(true)}
                 className="w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-white"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
+                style={{ pointerEvents: "auto" }}
               >
                 <PlusIcon className="w-6 h-6" />
               </motion.button>
@@ -583,17 +601,7 @@ export function TimeTable() {
           )}
         </AnimatePresence>
 
-        {/* Отступ для прокрутки */}
-        {isBookingFormOpen && (
-          <div
-            className="h-[70vh]"
-            style={{
-              pointerEvents: "none",
-              userSelect: "none"
-            }}
-          />
-        )}
-
+        {/* Убираем отступ для прокрутки */}
         <AnimatePresence>
           {isBookingFormOpen && (
             <motion.div
@@ -607,160 +615,157 @@ export function TimeTable() {
                 }
               }}
             >
-              {/* Делаем основной контейнер скроллируемым */}
-              <div className="absolute inset-0 overflow-y-auto">
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-xl p-6"
-                  drag="y"
-                  dragConstraints={{ top: 0, bottom: 0 }}
-                  dragElastic={0.2}
-                  onDragEnd={(_, info) => {
-                    if (info.offset.y > 200) {
-                      setIsBookingFormOpen(false);
-                    }
-                  }}
-                  style={{
-                    maxHeight: "70vh",
-                    touchAction: "none"
-                  }}
-                >
-                  <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6" />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-xl p-6"
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 200) {
+                    setIsBookingFormOpen(false);
+                  }
+                }}
+                style={{
+                  maxHeight: "70vh",
+                  touchAction: "none"
+                }}
+              >
+                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6" />
 
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Жаңа жазылым</h3>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Жаңа жазылым</h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsBookingFormOpen(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Форма бронирования */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Бөлме</label>
+                      <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Бөлмені таңдаңыз" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rooms.map((room) => (
+                            <SelectItem key={room} value={room}>
+                              Бөлме {room}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedRoom && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Орын</label>
+                        <Select value={selectedBed} onValueChange={setSelectedBed}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Орынды таңдаңыз" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {beds.map((bed) => (
+                              <SelectItem key={bed} value={bed}>
+                                Орын {selectedRoom}-{bed}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={findNextAvailableTime}
+                      variant="outline"
+                      className="w-full h-12 text-base"
+                    >
+                      Жақын арадағы бос уақыт
+                    </Button>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Басталу уақыты</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedHour} onValueChange={setSelectedHour}>
+                          <SelectTrigger
+                            className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                              }`}
+                          >
+                            <SelectValue placeholder="Час" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 16 }, (_, i) => i + 8).map((hour) => (
+                              <SelectItem key={hour} value={hour.toString().padStart(2, '0')}>
+                                {hour.toString().padStart(2, '0')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="flex items-center">:</span>
+                        <Select value={selectedMinute} onValueChange={setSelectedMinute}>
+                          <SelectTrigger
+                            className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                              }`}
+                          >
+                            <SelectValue placeholder="Минуты" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["00", "15", "30", "45"].map((minute) => (
+                              <SelectItem key={minute} value={minute}>
+                                {minute}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Режим</label>
+                      <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Режимді таңдаңыз" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(WASH_MODES).map(([key, { name }]) => (
+                            <SelectItem key={key} value={key}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        className="flex-1"
                         onClick={() => setIsBookingFormOpen(false)}
                       >
-                        <X className="h-4 w-4" />
+                        Болдырмау
                       </Button>
-                    </div>
-
-                    {/* Форма бронирования */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Бөлме</label>
-                        <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Бөлмені таңдаңыз" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rooms.map((room) => (
-                              <SelectItem key={room} value={room}>
-                                Бөлме {room}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {selectedRoom && (
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Орын</label>
-                          <Select value={selectedBed} onValueChange={setSelectedBed}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Орынды таңдаңыз" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {beds.map((bed) => (
-                                <SelectItem key={bed} value={bed}>
-                                  Орын {selectedRoom}-{bed}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
                       <Button
-                        onClick={findNextAvailableTime}
-                        variant="outline"
-                        className="w-full h-12 text-base"
+                        className="flex-1"
+                        onClick={() => {
+                          handleAddBooking();
+                          setIsBookingFormOpen(false);
+                        }}
                       >
-                        Жақын арадағы бос уақыт
+                        Жазылу
                       </Button>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Басталу уақыты</label>
-                        <div className="flex gap-2">
-                          <Select value={selectedHour} onValueChange={setSelectedHour}>
-                            <SelectTrigger
-                              className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                                }`}
-                            >
-                              <SelectValue placeholder="Час" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 16 }, (_, i) => i + 8).map((hour) => (
-                                <SelectItem key={hour} value={hour.toString().padStart(2, '0')}>
-                                  {hour.toString().padStart(2, '0')}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <span className="flex items-center">:</span>
-                          <Select value={selectedMinute} onValueChange={setSelectedMinute}>
-                            <SelectTrigger
-                              className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                                }`}
-                            >
-                              <SelectValue placeholder="Минуты" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {["00", "15", "30", "45"].map((minute) => (
-                                <SelectItem key={minute} value={minute}>
-                                  {minute}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Режим</label>
-                        <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Режимді таңдаңыз" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(WASH_MODES).map(([key, { name }]) => (
-                              <SelectItem key={key} value={key}>
-                                {name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex gap-2 pt-4">
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => setIsBookingFormOpen(false)}
-                        >
-                          Болдырмау
-                        </Button>
-                        <Button
-                          className="flex-1"
-                          onClick={() => {
-                            handleAddBooking();
-                            setIsBookingFormOpen(false);
-                          }}
-                        >
-                          Жазылу
-                        </Button>
-                      </div>
                     </div>
                   </div>
-                </motion.div>
-              </div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
