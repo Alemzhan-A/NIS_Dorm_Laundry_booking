@@ -67,17 +67,25 @@ export function TimeTable() {
   const [currentTime, setCurrentTime] = useState(getKazakhstanTime());
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
 
-  // Загружаем бронирования из localStorage при монтировании
+  // Загружаем бронирования при монтировании
   useEffect(() => {
-    const savedBookings = localStorage.getItem('bookings');
-    if (savedBookings) {
-      const parsedBookings = JSON.parse(savedBookings).map((booking: any) => ({
-        ...booking,
-        startTime: new Date(booking.startTime),
-        endTime: new Date(booking.endTime)
-      }));
-      setBookings(parsedBookings);
-    }
+    const fetchBookings = async () => {
+      try {
+        const response = await fetch('/api/bookings');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        const parsedBookings = data.map((booking: any) => ({
+          ...booking,
+          startTime: new Date(booking.startTime),
+          endTime: new Date(booking.endTime)
+        }));
+        setBookings(parsedBookings);
+      } catch (error) {
+        console.error('Failed to fetch bookings:', error);
+      }
+    };
+
+    fetchBookings();
   }, []);
 
   // Сохраняем бронирования в localStorage при изменении
@@ -117,7 +125,7 @@ export function TimeTable() {
     }
   };
 
-  const handleAddBooking = () => {
+  const handleAddBooking = async () => {
     if (!selectedRoom || !selectedBed) {
       setAlertMessage("Бөлме мен орынды таңдаңыз");
       setShowAlert(true);
@@ -165,8 +173,28 @@ export function TimeTable() {
       color: BOOKING_COLORS[colorIndex],
     };
 
-    setBookings([...bookings, newBooking]);
-    setColorIndex((colorIndex + 1) % BOOKING_COLORS.length);
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newBooking),
+      });
+
+      if (!response.ok) throw new Error('Failed to save booking');
+
+      setBookings([...bookings, newBooking]);
+      setColorIndex((colorIndex + 1) % BOOKING_COLORS.length);
+
+      if (isBookingFormOpen) {
+        setIsBookingFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to save booking:', error);
+      setAlertMessage("Сақтау кезінде қате шықты");
+      setShowAlert(true);
+    }
   };
 
   const findNextAvailableTime = () => {
