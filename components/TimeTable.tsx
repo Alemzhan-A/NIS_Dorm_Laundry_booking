@@ -23,6 +23,7 @@ import {
 } from "./ui/alert-dialog";
 import { ChevronLeft, ChevronRight, PlusIcon, X } from "lucide-react";
 import { getKazakhstanTime, formatKazakhstanTime } from "@/lib/date";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const WASH_MODES = {
   delicate: { name: "Деликатная", duration: 75 },
@@ -34,8 +35,8 @@ const BOOKING_COLORS = [
   "#4ECDC4",
   "#45B7D1",
   "#96CEB4",
-  "#FFEEAD",
-  "#D4A5A5",
+  "#FFD93D",
+  "#FF8E9E",
 ];
 
 const WORKING_HOURS = {
@@ -67,7 +68,6 @@ interface Booking {
 export function TimeTable() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedMode, setSelectedMode] = useState<keyof typeof WASH_MODES>("quick");
-  const [colorIndex, setColorIndex] = useState(0);
   const [selectedHour, setSelectedHour] = useState("08");
   const [selectedMinute, setSelectedMinute] = useState("00");
   const [selectedRoom, setSelectedRoom] = useState("");
@@ -136,6 +136,12 @@ export function TimeTable() {
     }
   };
 
+  // Функция для получения случайного цвета
+  const getRandomColor = () => {
+    const randomIndex = Math.floor(Math.random() * BOOKING_COLORS.length);
+    return BOOKING_COLORS[randomIndex];
+  };
+
   const handleAddBooking = async () => {
     if (!selectedRoom || !selectedBed) {
       setAlertMessage("Бөлме мен орынды таңдаңыз");
@@ -156,7 +162,13 @@ export function TimeTable() {
     }
 
     // Проверка на прошедшее время
-    if (startTime < getKazakhstanTime()) {
+    const now = getKazakhstanTime();
+    const isInPast = startTime < now && (
+      startTime.getHours() < now.getHours() ||
+      (startTime.getHours() === now.getHours() && startTime.getMinutes() < now.getMinutes())
+    );
+
+    if (isInPast) {
       setAlertMessage("Мүмкін емес");
       setShowAlert(true);
       return;
@@ -179,8 +191,8 @@ export function TimeTable() {
     }
 
     // Проверка на время окончания
-    if (endTime.getHours() >= WORKING_HOURS.end) {
-      setAlertMessage("Стирка должна закончиться до 20:00");
+    if (endTime.getHours() >= 21) {
+      setAlertMessage("Стирка должна закончиться до 21:00");
       setShowAlert(true);
       return;
     }
@@ -191,7 +203,7 @@ export function TimeTable() {
       startTime,
       endTime,
       mode: selectedMode,
-      color: BOOKING_COLORS[colorIndex],
+      color: getRandomColor(),
       createdAt: new Date(),
     };
 
@@ -212,7 +224,6 @@ export function TimeTable() {
         ...newBooking,
         id: savedBooking._id
       }]);
-      setColorIndex((colorIndex + 1) % BOOKING_COLORS.length);
 
       if (isBookingFormOpen) {
         setIsBookingFormOpen(false);
@@ -248,8 +259,7 @@ export function TimeTable() {
 
     // Начинаем с текущего времени
     let startTime = new Date(now);
-    startTime.setMinutes(currentMinute + 1, 0, 0); // добавляем 1 минуту к текущему времени
-
+    startTime.setSeconds(0, 0); // обнуляем только секунды и миллисекунды
 
     // Проверяем каждую минуту до конца дня
     while (startTime.getHours() < WORKING_HOURS.end) {
@@ -300,11 +310,14 @@ export function TimeTable() {
     <div className="space-y-8 relative min-h-screen">
       {/* Desktop версия */}
       <div className="hidden md:block">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-md">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg p-8 shadow-md">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold">  Бүгінге жазылу</h3>
-            <div className="text-sm text-gray-500">
-              Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-500">
+                Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+              </div>
+              <ThemeToggle />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -313,7 +326,7 @@ export function TimeTable() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Бөлме</label>
                   <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                    <SelectTrigger className="w-full h-12">
+                    <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                       <SelectValue placeholder="Бөлмені таңдаңыз" />
                     </SelectTrigger>
                     <SelectContent>
@@ -330,7 +343,7 @@ export function TimeTable() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Орын</label>
                     <Select value={selectedBed} onValueChange={setSelectedBed}>
-                      <SelectTrigger className="w-full h-12">
+                      <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                         <SelectValue placeholder="Орынды таңдаңыз" />
                       </SelectTrigger>
                       <SelectContent>
@@ -349,7 +362,7 @@ export function TimeTable() {
                 <Button
                   onClick={findNextAvailableTime}
                   variant="outline"
-                  className="w-full h-12 text-base"
+                  className="w-full h-12 text-base dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-zinc-700"
                 >
                   Жақын арадағы бос уақыт
                 </Button>
@@ -363,7 +376,7 @@ export function TimeTable() {
                       className={`w-[120px] h-12 transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
                         }`}
                     >
-                      <SelectValue placeholder="Сағат" />
+                      <SelectValue placeholder="Час" />
                     </SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
@@ -380,7 +393,7 @@ export function TimeTable() {
                   <span className="flex items-center text-lg">:</span>
                   <Select value={selectedMinute} onValueChange={setSelectedMinute}>
                     <SelectTrigger
-                      className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                      className={`w-[120px] transition-all h-12 dark:bg-zinc-800 dark:border-zinc-700 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
                         }`}
                     >
                       <SelectValue placeholder="Минуты" />
@@ -424,7 +437,7 @@ export function TimeTable() {
               </Button>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg border p-8">
+            <div className="bg-white dark:bg-zinc-900 rounded-lg border p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <button
@@ -432,7 +445,7 @@ export function TimeTable() {
                       if (selectedDate === 'today') setSelectedDate('yesterday');
                       else if (selectedDate === 'yesterday') setSelectedDate('twoDaysAgo');
                     }}
-                    className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedDate !== 'today' ? 'text-primary' : 'text-gray-400'
+                    className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'today' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
                       }`}
                     disabled={selectedDate === 'twoDaysAgo'}
                   >
@@ -446,7 +459,7 @@ export function TimeTable() {
                       if (selectedDate === 'twoDaysAgo') setSelectedDate('yesterday');
                       else if (selectedDate === 'yesterday') setSelectedDate('today');
                     }}
-                    className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-primary' : 'text-gray-400'
+                    className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
                       }`}
                     disabled={selectedDate === 'today'}
                   >
@@ -458,17 +471,17 @@ export function TimeTable() {
                 </div>
               </div>
 
-              <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20">
+              <div className="relative h-[1000px] bg-gray-50 dark:bg-zinc-950/50">
                 {/* Горизонтальные разделители для часов */}
                 <div className="absolute inset-0 left-20">
                   {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
-                      className={`absolute w-full border-t border-gray-200 dark:border-gray-700 ${index === 0 ? 'border-t-0' : ''
+                      className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
                         } ${index === 13 ? 'border-b-0' : ''
                         }`}
                       style={{
-                        top: `${(index * 100) / 13}%`,
+                        top: `${(index * 100) / 14}%`,
                       }}
                     />
                   ))}
@@ -479,10 +492,10 @@ export function TimeTable() {
                   {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
-                      className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500"
+                      className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400"
                       style={{
-                        height: `${100 / 13}%`,
-                        top: `${(index * 100) / 13}%`,
+                        height: `${100 / 14}%`,
+                        top: `${(index * 100) / 14}%`,
                       }}
                     >
                       {hour.toString().padStart(2, '0')}:00
@@ -501,7 +514,7 @@ export function TimeTable() {
                       const startMinute = booking.startTime.getMinutes();
                       const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                      const totalMinutesInDay = 13 * 60;
+                      const totalMinutesInDay = 14 * 60;
                       const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
                       const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
                       const height = (durationMinutes / totalMinutesInDay) * 100;
@@ -511,7 +524,7 @@ export function TimeTable() {
                           key={booking.id}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="absolute left-3 right-3 rounded-md shadow-sm"
+                          className="absolute left-3 right-3 rounded-md shadow-sm dark:shadow-zinc-900/50"
                           style={{
                             top: `${startPosition}%`,
                             height: `${height}%`,
@@ -522,9 +535,9 @@ export function TimeTable() {
                           <div className="p-3 h-full flex items-center">
                             <div className="text-sm flex items-center gap-3 whitespace-nowrap overflow-hidden">
                               <span className="font-medium">{booking.roomBed}</span>
-                              <span className="h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
+                              <span className="h-4 w-px bg-gray-300 dark:bg-zinc-700"></span>
                               <span>{format(booking.startTime, "HH:mm")} - {format(booking.endTime, "HH:mm")}</span>
-                              <span className="h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
+                              <span className="h-4 w-px bg-gray-300 dark:bg-zinc-700"></span>
                               <span>{WASH_MODES[booking.mode].name}</span>
                             </div>
                           </div>
@@ -540,7 +553,7 @@ export function TimeTable() {
 
       {/* Мобильная версия */}
       <div className="md:hidden">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <button
@@ -548,7 +561,7 @@ export function TimeTable() {
                   if (selectedDate === 'today') setSelectedDate('yesterday');
                   else if (selectedDate === 'yesterday') setSelectedDate('twoDaysAgo');
                 }}
-                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedDate !== 'today' ? 'text-primary' : 'text-gray-400'
+                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'today' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
                   }`}
                 disabled={selectedDate === 'twoDaysAgo'}
               >
@@ -562,35 +575,36 @@ export function TimeTable() {
                   if (selectedDate === 'twoDaysAgo') setSelectedDate('yesterday');
                   else if (selectedDate === 'yesterday') setSelectedDate('today');
                 }}
-                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-primary' : 'text-gray-400'
+                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
                   }`}
                 disabled={selectedDate === 'today'}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-end gap-2">
+              <ThemeToggle />
               <div className="text-sm text-gray-500">
                 {formatKazakhstanTime(currentTime)}
               </div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-gray-400">
                 Жұмыс істеу уақыты: 8:00 - 20:00
               </div>
             </div>
           </div>
 
           {/* Timetable для мобильной версии */}
-          <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+          <div className="relative h-[1000px] bg-gray-50 dark:bg-zinc-950/50 rounded-lg">
             {/* Горизонтальные разделители для часов */}
             <div className="absolute inset-0 left-20">
               {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
-                  className={`absolute w-full border-t border-gray-200 dark:border-gray-700 ${index === 0 ? 'border-t-0' : ''
+                  className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
                     } ${index === 13 ? 'border-b-0' : ''
                     }`}
                   style={{
-                    top: `${(index * 100) / 13}%`,
+                    top: `${(index * 100) / 14}%`,
                   }}
                 />
               ))}
@@ -601,10 +615,10 @@ export function TimeTable() {
               {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
-                  className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500"
+                  className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400"
                   style={{
-                    height: `${100 / 13}%`,
-                    top: `${(index * 100) / 13}%`,
+                    height: `${100 / 14}%`,
+                    top: `${(index * 100) / 14}%`,
                   }}
                 >
                   {hour.toString().padStart(2, '0')}:00
@@ -623,7 +637,7 @@ export function TimeTable() {
                   const startMinute = booking.startTime.getMinutes();
                   const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                  const totalMinutesInDay = 13 * 60;
+                  const totalMinutesInDay = 14 * 60;
                   const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
                   const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
                   const height = (durationMinutes / totalMinutesInDay) * 100;
@@ -633,7 +647,7 @@ export function TimeTable() {
                       key={booking.id}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="absolute left-3 right-3 rounded-md shadow-sm"
+                      className="absolute left-3 right-3 rounded-md shadow-sm dark:shadow-zinc-900/50"
                       style={{
                         top: `${startPosition}%`,
                         height: `${height}%`,
@@ -645,9 +659,9 @@ export function TimeTable() {
                       <div className="p-2 h-full flex items-center">
                         <div className="text-xs flex items-center gap-2 whitespace-nowrap overflow-hidden">
                           <span className="font-medium">{booking.roomBed}</span>
-                          <span className="h-3 w-px bg-gray-300 dark:bg-gray-600"></span>
+                          <span className="h-3 w-px bg-gray-300 dark:bg-zinc-700"></span>
                           <span>{format(booking.startTime, "HH:mm")} - {format(booking.endTime, "HH:mm")}</span>
-                          <span className="h-3 w-px bg-gray-300 dark:bg-gray-600"></span>
+                          <span className="h-3 w-px bg-gray-300 dark:bg-zinc-700"></span>
                           <span>{WASH_MODES[booking.mode].name}</span>
                         </div>
                       </div>
@@ -673,7 +687,7 @@ export function TimeTable() {
             >
               <motion.button
                 onClick={() => setIsBookingFormOpen(true)}
-                className="w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-white"
+                className="w-14 h-14 bg-primary hover:bg-primary/90 dark:bg-primary/90 dark:hover:bg-primary rounded-full shadow-lg flex items-center justify-center text-white"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 style={{ pointerEvents: "auto" }}
@@ -703,7 +717,7 @@ export function TimeTable() {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-xl p-6"
+                className="absolute bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 rounded-t-xl p-6"
                 drag="y"
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={0.2}
@@ -717,7 +731,7 @@ export function TimeTable() {
                   touchAction: "none"
                 }}
               >
-                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6" />
+                <div className="w-12 h-1 bg-gray-200 dark:bg-zinc-700 rounded-full mx-auto mb-6" />
 
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -726,6 +740,7 @@ export function TimeTable() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setIsBookingFormOpen(false)}
+                      className="dark:hover:bg-zinc-700"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -736,7 +751,7 @@ export function TimeTable() {
                     <div>
                       <label className="block text-sm font-medium mb-2">Бөлме</label>
                       <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                           <SelectValue placeholder="Бөлмені таңдаңыз" />
                         </SelectTrigger>
                         <SelectContent>
@@ -753,7 +768,7 @@ export function TimeTable() {
                       <div>
                         <label className="block text-sm font-medium mb-2">Орын</label>
                         <Select value={selectedBed} onValueChange={setSelectedBed}>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                             <SelectValue placeholder="Орынды таңдаңыз" />
                           </SelectTrigger>
                           <SelectContent>
@@ -770,7 +785,7 @@ export function TimeTable() {
                     <Button
                       onClick={findNextAvailableTime}
                       variant="outline"
-                      className="w-full h-12 text-base"
+                      className="w-full h-12 text-base dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-zinc-700"
                     >
                       Жақын арадағы бос уақыт
                     </Button>
@@ -819,7 +834,7 @@ export function TimeTable() {
                     <div>
                       <label className="block text-sm font-medium mb-2">Режим</label>
                       <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full dark:border-zinc-700">
                           <SelectValue placeholder="Режимді таңдаңыз" />
                         </SelectTrigger>
                         <SelectContent>
