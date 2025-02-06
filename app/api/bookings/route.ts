@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as fs from 'fs/promises';
 import path from 'path';
-import { log } from 'console';
 
 const dataFilePath = path.join(process.cwd(), 'data', 'bookings.json');
 

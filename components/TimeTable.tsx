@@ -43,6 +43,16 @@ const WORKING_HOURS = {
   end: 24, // 00:00
 };
 
+// Добавим тип для сырых данных с сервера
+interface BookingFromServer {
+  id: string;
+  roomBed: string;
+  startTime: string; // с сервера приходит как строка
+  endTime: string;   // с сервера приходит как строка
+  mode: keyof typeof WASH_MODES;
+  color: string;
+}
+
 interface Booking {
   id: string;
   roomBed: string;
@@ -74,7 +84,7 @@ export function TimeTable() {
         const response = await fetch('/api/bookings');
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
-        const parsedBookings = data.map((booking: any) => ({
+        const parsedBookings = data.map((booking: BookingFromServer) => ({
           ...booking,
           startTime: new Date(booking.startTime),
           endTime: new Date(booking.endTime)
