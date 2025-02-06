@@ -687,12 +687,12 @@ export function TimeTable() {
             >
               <motion.button
                 onClick={() => setIsBookingFormOpen(true)}
-                className="w-14 h-14 bg-primary hover:bg-primary/90 dark:bg-primary/90 dark:hover:bg-primary rounded-full shadow-lg flex items-center justify-center text-white"
+                className="w-14 h-14 bg-primary hover:bg-primary/90 dark:bg-primary/90 dark:hover:bg-primary rounded-full shadow-lg flex items-center justify-center"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 style={{ pointerEvents: "auto" }}
               >
-                <PlusIcon className="w-6 h-6" />
+                <PlusIcon className="w-6 h-6 text-white dark:text-zinc-900" />
               </motion.button>
             </motion.div>
           )}
