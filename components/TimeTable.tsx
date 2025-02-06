@@ -26,7 +26,7 @@ import { getKazakhstanTime, formatKazakhstanTime } from "@/lib/date";
 
 const WASH_MODES = {
   delicate: { name: "Деликатная", duration: 75 },
-  quick: { name: "Быстрая 30", duration: 30 },
+  quick: { name: "Быстрая 30", duration: 35 },
 };
 
 const BOOKING_COLORS = [
@@ -39,18 +39,19 @@ const BOOKING_COLORS = [
 ];
 
 const WORKING_HOURS = {
-  start: 8, // 8:00
-  end: 24, // 00:00
+  start: 8,  // 8:00
+  end: 20,   // 20:00
 };
 
 // Добавим тип для сырых данных с сервера
 interface BookingFromServer {
-  id: string;
-  roomBed: string;
-  startTime: string; // с сервера приходит как строка
-  endTime: string;   // с сервера приходит как строка
+  _id: string;           // MongoDB ID
+  roomBed: string;       // "301-1"
+  startTime: string;     // ISO string
+  endTime: string;       // ISO string
   mode: keyof typeof WASH_MODES;
   color: string;
+  createdAt: string;     // ISO string
 }
 
 interface Booking {
@@ -60,6 +61,7 @@ interface Booking {
   endTime: Date;
   mode: keyof typeof WASH_MODES;
   color: string;
+  createdAt: Date;
 }
 
 export function TimeTable() {
@@ -85,9 +87,13 @@ export function TimeTable() {
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         const parsedBookings = data.map((booking: BookingFromServer) => ({
-          ...booking,
+          id: booking._id,
+          roomBed: booking.roomBed,
           startTime: new Date(booking.startTime),
-          endTime: new Date(booking.endTime)
+          endTime: new Date(booking.endTime),
+          mode: booking.mode,
+          color: booking.color,
+          createdAt: new Date(booking.createdAt)
         }));
         setBookings(parsedBookings);
       } catch (error) {
@@ -97,11 +103,6 @@ export function TimeTable() {
 
     fetchBookings();
   }, []);
-
-  // Сохраняем бронирования в localStorage при изменении
-  useEffect(() => {
-    localStorage.setItem('bookings', JSON.stringify(bookings));
-  }, [bookings]);
 
   // Обновляем текущее время каждую минуту
   useEffect(() => {
@@ -161,15 +162,25 @@ export function TimeTable() {
       return;
     }
 
-    // Проверка на пересечение с существующими бронированиями
+    // Проверка на пересечение времени (независимо от комнаты/кровати)
     const hasOverlap = bookings.some((booking) => {
       return (
-        startTime < booking.endTime && endTime > booking.startTime
+        (startTime < booking.endTime && endTime > booking.startTime) || // новое бронирование пересекается с существующим
+        (startTime >= booking.startTime && startTime < booking.endTime) || // начало нового внутри существующего
+        (endTime > booking.startTime && endTime <= booking.endTime) || // конец нового внутри существующего
+        (startTime <= booking.startTime && endTime >= booking.endTime) // новое полностью включает существующее
       );
     });
 
     if (hasOverlap) {
       setAlertMessage("Бұл уақыт бос емес");
+      setShowAlert(true);
+      return;
+    }
+
+    // Проверка на время окончания
+    if (endTime.getHours() >= WORKING_HOURS.end) {
+      setAlertMessage("Стирка должна закончиться до 20:00");
       setShowAlert(true);
       return;
     }
@@ -181,6 +192,7 @@ export function TimeTable() {
       endTime,
       mode: selectedMode,
       color: BOOKING_COLORS[colorIndex],
+      createdAt: new Date(),
     };
 
     try {
@@ -194,7 +206,12 @@ export function TimeTable() {
 
       if (!response.ok) throw new Error('Failed to save booking');
 
-      setBookings([...bookings, newBooking]);
+      const savedBooking = await response.json();
+
+      setBookings([...bookings, {
+        ...newBooking,
+        id: savedBooking._id
+      }]);
       setColorIndex((colorIndex + 1) % BOOKING_COLORS.length);
 
       if (isBookingFormOpen) {
@@ -208,6 +225,12 @@ export function TimeTable() {
   };
 
   const findNextAvailableTime = () => {
+    if (!selectedRoom || !selectedBed) {
+      setAlertMessage("Алдымен бөлме мен орынды таңдаңыз");
+      setShowAlert(true);
+      return;
+    }
+
     const now = getKazakhstanTime();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -225,17 +248,11 @@ export function TimeTable() {
 
     // Начинаем с текущего времени
     let startTime = new Date(now);
+    startTime.setMinutes(currentMinute + 1, 0, 0); // добавляем 1 минуту к текущему времени
 
-    // Округляем до следующих 15 минут
-    const roundedMinutes = Math.ceil(currentMinute / 15) * 15;
-    startTime.setMinutes(roundedMinutes, 0, 0);
+    const selectedRoomBed = `${selectedRoom}-${selectedBed}`;
 
-    // Если округленное время выходит за текущий час
-    if (roundedMinutes === 60) {
-      startTime.setHours(currentHour + 1, 0, 0, 0);
-    }
-
-    // Проверяем каждый 15-минутный интервал до конца дня
+    // Проверяем каждую минуту до конца дня
     while (startTime.getHours() < WORKING_HOURS.end) {
       const endTime = addMinutes(startTime, WASH_MODES.quick.duration);
 
@@ -244,15 +261,12 @@ export function TimeTable() {
         isSameDay(booking.startTime, today)
       );
 
-      // Проверяем пересечения
+      // Проверяем пересечения по времени (независимо от комнаты/кровати)
       const hasOverlap = todayBookings.some(booking => {
-        const bookingStart = new Date(booking.startTime);
-        const bookingEnd = new Date(booking.endTime);
-
         return (
-          (startTime >= bookingStart && startTime < bookingEnd) ||
-          (endTime > bookingStart && endTime <= bookingEnd) ||
-          (startTime <= bookingStart && endTime >= bookingEnd)
+          (startTime >= booking.startTime && startTime < booking.endTime) ||
+          (endTime > booking.startTime && endTime <= booking.endTime) ||
+          (startTime <= booking.startTime && endTime >= booking.endTime)
         );
       });
 
@@ -267,8 +281,8 @@ export function TimeTable() {
         return;
       }
 
-      // Переходим к следующему 15-минутному интервалу
-      startTime = addMinutes(startTime, 15);
+      // Переходим к следующей минуте
+      startTime = addMinutes(startTime, 1);
     }
 
     // Если не нашли свободных слотов
@@ -353,7 +367,7 @@ export function TimeTable() {
                       <SelectValue placeholder="Сағат" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 16 }, (_, i) => i + 8).map((hour) => (
+                      {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
                         <SelectItem
                           key={hour}
                           value={hour.toString().padStart(2, '0')}
@@ -367,17 +381,21 @@ export function TimeTable() {
                   <span className="flex items-center text-lg">:</span>
                   <Select value={selectedMinute} onValueChange={setSelectedMinute}>
                     <SelectTrigger
-                      className={`w-[120px] h-12 transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                      className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
                         }`}
                     >
-                      <SelectValue placeholder="Минут" />
+                      <SelectValue placeholder="Минуты" />
                     </SelectTrigger>
                     <SelectContent>
-                      {["00", "15", "30", "45"].map((minute) =>
-                        <SelectItem key={minute} value={minute} className="h-11">
-                          {minute}
+                      {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                        <SelectItem
+                          key={minute}
+                          value={minute.toString().padStart(2, '0')}
+                          className="h-11"
+                        >
+                          {minute.toString().padStart(2, '0')}
                         </SelectItem>
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -441,15 +459,15 @@ export function TimeTable() {
                 </div>
               </div>
 
-              <div className="relative h-[800px] bg-gray-50 dark:bg-gray-900/20">
+              <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20">
                 {/* Горизонтальные разделители для часов */}
                 <div className="absolute inset-0 left-20">
-                  {Array.from({ length: 17 }, (_, i) => i + 8).map((hour) => (
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
                     <div
                       key={hour}
                       className="absolute w-full border-t border-gray-200 dark:border-gray-700"
                       style={{
-                        top: `${((hour - 8) * 100) / 16}%`,
+                        top: `${((hour - 8) * 100) / 13}%`,
                       }}
                     />
                   ))}
@@ -457,7 +475,7 @@ export function TimeTable() {
 
                 {/* Временная шкала слева */}
                 <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col justify-between py-2 text-base text-gray-500">
-                  {Array.from({ length: 17 }, (_, i) => i + 8).map((hour) => (
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
                     <div key={hour} className="px-6">
                       {hour.toString().padStart(2, '0')}:00
                     </div>
@@ -475,8 +493,10 @@ export function TimeTable() {
                       const startMinute = booking.startTime.getMinutes();
                       const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                      const startPosition = ((startHour - 8) * 60 + startMinute) * (100 / (16 * 60));
-                      const height = (durationMinutes * 100) / (16 * 60);
+                      const totalMinutesInDay = 13 * 60;
+                      const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
+                      const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
+                      const height = (durationMinutes / totalMinutesInDay) * 100;
 
                       return (
                         <motion.div
@@ -541,30 +561,35 @@ export function TimeTable() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="text-sm text-gray-500">
-              {formatKazakhstanTime(currentTime)}
+            <div className="flex flex-col items-end">
+              <div className="text-sm text-gray-500">
+                {formatKazakhstanTime(currentTime)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Жұмыс істеу уақыты: 8:00 - 20:00
+              </div>
             </div>
           </div>
 
           {/* Timetable для мобильной версии */}
-          <div className="relative h-[calc(100vh-12rem)] bg-gray-50 dark:bg-gray-900/20">
+          <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20">
             {/* Горизонтальные разделители для часов */}
             <div className="absolute inset-0 left-20">
-              {Array.from({ length: 17 }, (_, i) => i + 8).map((hour) => (
+              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
                 <div
                   key={hour}
                   className="absolute w-full border-t border-gray-200 dark:border-gray-700"
                   style={{
-                    top: `${((hour - 8) * 100) / 16}%`,
+                    top: `${((hour - 8) * 100) / 13}%`,
                   }}
                 />
               ))}
             </div>
 
             {/* Временная шкала слева */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col justify-between py-2 text-base text-gray-500">
-              {Array.from({ length: 17 }, (_, i) => i + 8).map((hour) => (
-                <div key={hour} className="px-6">
+            <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col justify-between py-2 text-sm text-gray-500">
+              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
+                <div key={hour} className="px-4">
                   {hour.toString().padStart(2, '0')}:00
                 </div>
               ))}
@@ -581,8 +606,10 @@ export function TimeTable() {
                   const startMinute = booking.startTime.getMinutes();
                   const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                  const startPosition = ((startHour - 8) * 60 + startMinute) * (100 / (16 * 60));
-                  const height = (durationMinutes * 100) / (16 * 60);
+                  const totalMinutesInDay = 13 * 60;
+                  const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
+                  const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
+                  const height = (durationMinutes / totalMinutesInDay) * 100;
 
                   return (
                     <motion.div
@@ -594,15 +621,16 @@ export function TimeTable() {
                         top: `${startPosition}%`,
                         height: `${height}%`,
                         backgroundColor: booking.color,
-                        zIndex: 10
+                        zIndex: 10,
+                        minHeight: "2.5rem"
                       }}
                     >
-                      <div className="p-3 h-full flex items-center">
-                        <div className="text-sm flex items-center gap-3 whitespace-nowrap overflow-hidden">
+                      <div className="p-2 h-full flex items-center">
+                        <div className="text-xs flex items-center gap-2 whitespace-nowrap overflow-hidden">
                           <span className="font-medium">{booking.roomBed}</span>
-                          <span className="h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
+                          <span className="h-3 w-px bg-gray-300 dark:bg-gray-600"></span>
                           <span>{format(booking.startTime, "HH:mm")} - {format(booking.endTime, "HH:mm")}</span>
-                          <span className="h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
+                          <span className="h-3 w-px bg-gray-300 dark:bg-gray-600"></span>
                           <span>{WASH_MODES[booking.mode].name}</span>
                         </div>
                       </div>
@@ -741,7 +769,7 @@ export function TimeTable() {
                             <SelectValue placeholder="Час" />
                           </SelectTrigger>
                           <SelectContent>
-                            {Array.from({ length: 16 }, (_, i) => i + 8).map((hour) => (
+                            {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
                               <SelectItem key={hour} value={hour.toString().padStart(2, '0')}>
                                 {hour.toString().padStart(2, '0')}
                               </SelectItem>
@@ -757,9 +785,13 @@ export function TimeTable() {
                             <SelectValue placeholder="Минуты" />
                           </SelectTrigger>
                           <SelectContent>
-                            {["00", "15", "30", "45"].map((minute) => (
-                              <SelectItem key={minute} value={minute}>
-                                {minute}
+                            {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                              <SelectItem
+                                key={minute}
+                                value={minute.toString().padStart(2, '0')}
+                                className="h-11"
+                              >
+                                {minute.toString().padStart(2, '0')}
                               </SelectItem>
                             ))}
                           </SelectContent>
