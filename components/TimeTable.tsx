@@ -250,7 +250,6 @@ export function TimeTable() {
     let startTime = new Date(now);
     startTime.setMinutes(currentMinute + 1, 0, 0); // добавляем 1 минуту к текущему времени
 
-    const selectedRoomBed = `${selectedRoom}-${selectedBed}`;
 
     // Проверяем каждую минуту до конца дня
     while (startTime.getHours() < WORKING_HOURS.end) {
@@ -462,21 +461,30 @@ export function TimeTable() {
               <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20">
                 {/* Горизонтальные разделители для часов */}
                 <div className="absolute inset-0 left-20">
-                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
-                      className="absolute w-full border-t border-gray-200 dark:border-gray-700"
+                      className={`absolute w-full border-t border-gray-200 dark:border-gray-700 ${index === 0 ? 'border-t-0' : ''
+                        } ${index === 13 ? 'border-b-0' : ''
+                        }`}
                       style={{
-                        top: `${((hour - 8) * 100) / 13}%`,
+                        top: `${(index * 100) / 13}%`,
                       }}
                     />
                   ))}
                 </div>
 
-                {/* Временная шкала слева */}
-                <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col justify-between py-2 text-base text-gray-500">
-                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
-                    <div key={hour} className="px-6">
+                {/* Временная шкала слева - десктопная версия */}
+                <div className="absolute left-0 top-0 bottom-0 w-20">
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+                    <div
+                      key={hour}
+                      className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500"
+                      style={{
+                        height: `${100 / 13}%`,
+                        top: `${(index * 100) / 13}%`,
+                      }}
+                    >
                       {hour.toString().padStart(2, '0')}:00
                     </div>
                   ))}
@@ -572,24 +580,33 @@ export function TimeTable() {
           </div>
 
           {/* Timetable для мобильной версии */}
-          <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20">
+          <div className="relative h-[1000px] bg-gray-50 dark:bg-gray-900/20 rounded-lg">
             {/* Горизонтальные разделители для часов */}
             <div className="absolute inset-0 left-20">
-              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
+              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
-                  className="absolute w-full border-t border-gray-200 dark:border-gray-700"
+                  className={`absolute w-full border-t border-gray-200 dark:border-gray-700 ${index === 0 ? 'border-t-0' : ''
+                    } ${index === 13 ? 'border-b-0' : ''
+                    }`}
                   style={{
-                    top: `${((hour - 8) * 100) / 13}%`,
+                    top: `${(index * 100) / 13}%`,
                   }}
                 />
               ))}
             </div>
 
-            {/* Временная шкала слева */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col justify-between py-2 text-sm text-gray-500">
-              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour) => (
-                <div key={hour} className="px-4">
+            {/* Временная шкала слева - мобильная версия */}
+            <div className="absolute left-0 top-0 bottom-0 w-20">
+              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+                <div
+                  key={hour}
+                  className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500"
+                  style={{
+                    height: `${100 / 13}%`,
+                    top: `${(index * 100) / 13}%`,
+                  }}
+                >
                   {hour.toString().padStart(2, '0')}:00
                 </div>
               ))}
