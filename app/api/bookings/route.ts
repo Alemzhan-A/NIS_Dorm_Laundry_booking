@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as fs from 'fs/promises';
 import path from 'path';
+import { log } from 'console';
 
 const dataFilePath = path.join(process.cwd(), 'data', 'bookings.json');
 
@@ -11,6 +12,7 @@ export async function GET() {
     const data = JSON.parse(jsonData);
     return NextResponse.json(data.bookings);
   } catch (error) {
+    console.log(error)
     return NextResponse.json({ error: 'Failed to read bookings' }, { status: 500 });
   }
 }
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
     await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
     return NextResponse.json(booking);
   } catch (error) {
+    console.log(error)
     return NextResponse.json({ error: 'Failed to add booking' }, { status: 500 });
   }
 } 
