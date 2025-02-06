@@ -244,7 +244,7 @@ export function TimeTable() {
 
     const now = getKazakhstanTime();
     const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+
 
     // Если текущее время меньше времени открытия
     if (currentHour < WORKING_HOURS.start) {
