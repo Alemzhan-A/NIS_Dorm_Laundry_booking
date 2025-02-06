@@ -698,7 +698,7 @@ export function TimeTable() {
           )}
         </AnimatePresence>
 
-        {/* Убираем отступ для прокрутки */}
+        {/* Мобильная форма бронирования */}
         <AnimatePresence>
           {isBookingFormOpen && (
             <motion.div
@@ -717,17 +717,9 @@ export function TimeTable() {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="absolute bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 rounded-t-xl p-6"
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(_, info) => {
-                  if (info.offset.y > 200) {
-                    setIsBookingFormOpen(false);
-                  }
-                }}
+                className="absolute bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 rounded-t-xl p-6 overflow-y-auto"
                 style={{
-                  maxHeight: "70vh",
+                  maxHeight: "85vh",
                   touchAction: "none"
                 }}
               >
@@ -754,7 +746,7 @@ export function TimeTable() {
                         <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                           <SelectValue placeholder="Бөлмені таңдаңыз" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" side="top" align="start">
                           {rooms.map((room) => (
                             <SelectItem key={room} value={room}>
                               Бөлме {room}
@@ -771,7 +763,7 @@ export function TimeTable() {
                           <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
                             <SelectValue placeholder="Орынды таңдаңыз" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent position="popper" side="top" align="start">
                             {beds.map((bed) => (
                               <SelectItem key={bed} value={bed}>
                                 Орын {selectedRoom}-{bed}
@@ -837,7 +829,7 @@ export function TimeTable() {
                         <SelectTrigger className="w-full dark:border-zinc-700">
                           <SelectValue placeholder="Режимді таңдаңыз" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent side="top">
                           {Object.entries(WASH_MODES).map(([key, { name }]) => (
                             <SelectItem key={key} value={key}>
                               {name}
@@ -847,7 +839,8 @@ export function TimeTable() {
                       </Select>
                     </div>
 
-                    <div className="flex gap-2 pt-4">
+                    {/* Кнопки внизу формы */}
+                    <div className="flex gap-2 sticky bottom-0 pt-4 bg-white dark:bg-zinc-800">
                       <Button
                         variant="outline"
                         className="flex-1"
