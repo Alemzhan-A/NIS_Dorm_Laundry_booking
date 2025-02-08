@@ -174,13 +174,16 @@ export function TimeTable() {
       return;
     }
 
-    // Проверка на пересечение времени (независимо от комнаты/кровати)
+    // Проверка на пересечение времени
     const hasOverlap = bookings.some((booking) => {
+      // Разрешаем начало нового бронирования точно в момент окончания предыдущего
+      // и окончание нового бронирования точно в момент начала следующего
       return (
-        (startTime < booking.endTime && endTime > booking.startTime) || // новое бронирование пересекается с существующим
-        (startTime >= booking.startTime && startTime < booking.endTime) || // начало нового внутри существующего
-        (endTime > booking.startTime && endTime <= booking.endTime) || // конец нового внутри существующего
-        (startTime <= booking.startTime && endTime >= booking.endTime) // новое полностью включает существующее
+        (startTime < booking.endTime && endTime > booking.startTime) && // общая проверка на пересечение
+        !(
+          startTime.getTime() === booking.endTime.getTime() || // разрешаем начало в момент окончания другого
+          endTime.getTime() === booking.startTime.getTime()    // разрешаем окончание в момент начала другого
+        )
       );
     });
 
@@ -270,12 +273,14 @@ export function TimeTable() {
         isSameDay(booking.startTime, today)
       );
 
-      // Проверяем пересечения по времени (независимо от комнаты/кровати)
+      // Проверяем пересечения по времени
       const hasOverlap = todayBookings.some(booking => {
         return (
-          (startTime >= booking.startTime && startTime < booking.endTime) ||
-          (endTime > booking.startTime && endTime <= booking.endTime) ||
-          (startTime <= booking.startTime && endTime >= booking.endTime)
+          (startTime < booking.endTime && endTime > booking.startTime) &&
+          !(
+            startTime.getTime() === booking.endTime.getTime() ||
+            endTime.getTime() === booking.startTime.getTime()
+          )
         );
       });
 
