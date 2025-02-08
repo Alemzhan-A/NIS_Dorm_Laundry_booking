@@ -269,7 +269,7 @@ export function TimeTable() {
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
     // Начинаем с текущего времени
-    let startTime = new Date(now);
+    const startTime = new Date(now);
     startTime.setSeconds(0, 0);
 
     // Если сейчас раньше 8:00, начинаем с 8:00
@@ -527,18 +527,22 @@ export function TimeTable() {
                   ))}
                 </div>
 
-                {/* Временная шкала слева - десктопная версия */}
+                {/* Временная шкала слева */}
                 <div className="absolute left-0 top-0 bottom-0 w-20">
                   {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
-                      className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400"
+                      className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
+                        } ${index === 13 ? 'border-b-0' : ''
+                        }`}
                       style={{
-                        height: `${100 / 14}%`,
                         top: `${(index * 100) / 14}%`,
+                        height: `${100 / 14}%`,
                       }}
                     >
-                      {hour.toString().padStart(2, '0')}:00
+                      <div className="absolute inset-0 flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400">
+                        {hour.toString().padStart(2, '0')}:00
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -568,7 +572,7 @@ export function TimeTable() {
                           style={{
                             top: `${startPosition}%`,
                             height: `${height}%`,
-                            backgroundColor: booking.color,
+                            backgroundColor: `${booking.color}D9`,
                             zIndex: 10
                           }}
                         >
@@ -654,18 +658,22 @@ export function TimeTable() {
               ))}
             </div>
 
-            {/* Временная шкала слева - мобильная версия */}
+            {/* Временная шкала слева */}
             <div className="absolute left-0 top-0 bottom-0 w-20">
               {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
-                  className="absolute w-full flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400"
+                  className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
+                    } ${index === 13 ? 'border-b-0' : ''
+                    }`}
                   style={{
-                    height: `${100 / 14}%`,
                     top: `${(index * 100) / 14}%`,
+                    height: `${100 / 14}%`,
                   }}
                 >
-                  {hour.toString().padStart(2, '0')}:00
+                  <div className="absolute inset-0 flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400">
+                    {hour.toString().padStart(2, '0')}:00
+                  </div>
                 </div>
               ))}
             </div>
@@ -695,7 +703,7 @@ export function TimeTable() {
                       style={{
                         top: `${startPosition}%`,
                         height: `${height}%`,
-                        backgroundColor: booking.color,
+                        backgroundColor: `${booking.color}D9`,
                         zIndex: 10,
                         minHeight: "2.5rem"
                       }}
