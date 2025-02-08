@@ -245,58 +245,82 @@ export function TimeTable() {
       return;
     }
 
+    if (!selectedMode) {
+      setAlertMessage("Алдымен режимді таңдаңыз");
+      setShowAlert(true);
+      return;
+    }
+
     const now = getKazakhstanTime();
     const currentHour = now.getHours();
-
 
     // Если текущее время меньше времени открытия
     if (currentHour < WORKING_HOURS.start) {
       setSelectedHour(WORKING_HOURS.start.toString().padStart(2, '0'));
       setSelectedMinute("00");
-      setSelectedMode("quick");
-
       setIsTimeHighlighted(true);
       setTimeout(() => setIsTimeHighlighted(false), 1000);
       return;
     }
 
+    // Получаем все бронирования на сегодня, отсортированные по времени начала
+    const todayBookings = bookings
+      .filter(booking => isSameDay(booking.startTime, today))
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
     // Начинаем с текущего времени
     let startTime = new Date(now);
-    startTime.setSeconds(0, 0); // обнуляем только секунды и миллисекунды
+    startTime.setSeconds(0, 0);
 
-    // Проверяем каждую минуту до конца дня
-    while (startTime.getHours() < WORKING_HOURS.end) {
-      const endTime = addMinutes(startTime, WASH_MODES.quick.duration);
+    // Если сейчас раньше 8:00, начинаем с 8:00
+    if (startTime.getHours() < WORKING_HOURS.start) {
+      startTime.setHours(WORKING_HOURS.start, 0, 0, 0);
+    }
 
-      // Проверяем только бронирования на сегодняшний день
-      const todayBookings = bookings.filter(booking =>
-        isSameDay(booking.startTime, today)
-      );
+    const requiredDuration = WASH_MODES[selectedMode].duration;
 
-      // Проверяем пересечения по времени
-      const hasOverlap = todayBookings.some(booking => {
-        return (
-          (startTime < booking.endTime && endTime > booking.startTime) &&
-          !(
-            startTime.getTime() === booking.endTime.getTime() ||
-            endTime.getTime() === booking.startTime.getTime()
-          )
-        );
-      });
+    // Проверяем каждый промежуток между бронированиями
+    for (let i = 0; i <= todayBookings.length; i++) {
+      const currentSlotStart = i === 0 ? startTime : todayBookings[i - 1].endTime;
+      const currentSlotEnd = i === todayBookings.length
+        ? new Date(today.setHours(WORKING_HOURS.end, 0, 0, 0))
+        : todayBookings[i].startTime;
 
-      if (!hasOverlap) {
-        // Нашли свободный слот
-        setSelectedHour(startTime.getHours().toString().padStart(2, '0'));
-        setSelectedMinute(startTime.getMinutes().toString().padStart(2, '0'));
-        setSelectedMode("quick");
+      // Проверяем, достаточно ли времени в текущем промежутке
+      const slotDuration = (currentSlotEnd.getTime() - currentSlotStart.getTime()) / (1000 * 60);
 
-        setIsTimeHighlighted(true);
-        setTimeout(() => setIsTimeHighlighted(false), 1000);
-        return;
+      if (slotDuration >= requiredDuration) {
+        // Если текущее время больше начала слота, используем текущее время
+        const actualStartTime = startTime > currentSlotStart ? startTime : currentSlotStart;
+        const proposedEndTime = addMinutes(actualStartTime, requiredDuration);
+
+        // Проверяем, что стирка закончится до закрытия
+        if (proposedEndTime.getHours() >= WORKING_HOURS.end) {
+          setAlertMessage("Бүгінге бос орын жоқ");
+          setShowAlert(true);
+          return;
+        }
+
+        // Проверяем, что нет пересечений с другими бронированиями
+        const hasOverlap = todayBookings.some(booking => {
+          return (
+            (actualStartTime < booking.endTime && proposedEndTime > booking.startTime) &&
+            !(
+              actualStartTime.getTime() === booking.endTime.getTime() ||
+              proposedEndTime.getTime() === booking.startTime.getTime()
+            )
+          );
+        });
+
+        if (!hasOverlap) {
+          // Нашли подходящий слот без пересечений
+          setSelectedHour(actualStartTime.getHours().toString().padStart(2, '0'));
+          setSelectedMinute(actualStartTime.getMinutes().toString().padStart(2, '0'));
+          setIsTimeHighlighted(true);
+          setTimeout(() => setIsTimeHighlighted(false), 1000);
+          return;
+        }
       }
-
-      // Переходим к следующей минуте
-      startTime = addMinutes(startTime, 1);
     }
 
     // Если не нашли свободных слотов
@@ -317,10 +341,19 @@ export function TimeTable() {
       <div className="hidden md:block">
         <div className="bg-white dark:bg-zinc-900 rounded-lg p-8 shadow-md">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold">  Бүгінге жазылу</h3>
+            <div className="flex flex-col">
+              <h3 className="text-xl font-semibold">Бүгінге жазылу</h3>
+            </div>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-500">
-                Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+              <div className="flex flex-col items-end">
+                <div className="text-sm text-gray-500">
+                  Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Жұмыс күндері 15:00 - 20:00
+                  <br />
+                  Демалыс күндері 9:00 - 20:00
+                </div>
               </div>
               <ThemeToggle />
             </div>
@@ -355,6 +388,24 @@ export function TimeTable() {
                         {beds.map((bed) => (
                           <SelectItem key={bed} value={bed} className="h-11">
                             Орын {selectedRoom}-{bed}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedRoom && selectedBed && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Режим</label>
+                    <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
+                      <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
+                        <SelectValue placeholder="Режимді таңдаңыз" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(WASH_MODES).map(([key, { name }]) => (
+                          <SelectItem key={key} value={key} className="h-11">
+                            {name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -416,22 +467,6 @@ export function TimeTable() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Режим</label>
-                <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
-                  <SelectTrigger className="w-full h-12">
-                    <SelectValue placeholder="Режимді таңдаңыз" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(WASH_MODES).map(([key, { name }]) => (
-                      <SelectItem key={key} value={key} className="h-11">
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <Button
@@ -560,32 +595,34 @@ export function TimeTable() {
       <div className="md:hidden">
         <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (selectedDate === 'today') setSelectedDate('yesterday');
-                  else if (selectedDate === 'yesterday') setSelectedDate('twoDaysAgo');
-                }}
-                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'today' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
-                  }`}
-                disabled={selectedDate === 'twoDaysAgo'}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <h4 className="text-base font-medium">
-                {getDateTitle(selectedDate)}
-              </h4>
-              <button
-                onClick={() => {
-                  if (selectedDate === 'twoDaysAgo') setSelectedDate('yesterday');
-                  else if (selectedDate === 'yesterday') setSelectedDate('today');
-                }}
-                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
-                  }`}
-                disabled={selectedDate === 'today'}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (selectedDate === 'today') setSelectedDate('yesterday');
+                    else if (selectedDate === 'yesterday') setSelectedDate('twoDaysAgo');
+                  }}
+                  className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'today' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                  disabled={selectedDate === 'twoDaysAgo'}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <h4 className="text-base font-medium">
+                  {getDateTitle(selectedDate)}
+                </h4>
+                <button
+                  onClick={() => {
+                    if (selectedDate === 'twoDaysAgo') setSelectedDate('yesterday');
+                    else if (selectedDate === 'yesterday') setSelectedDate('today');
+                  }}
+                  className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                  disabled={selectedDate === 'today'}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="flex flex-col items-end gap-2">
               <ThemeToggle />
@@ -593,7 +630,9 @@ export function TimeTable() {
                 {formatKazakhstanTime(currentTime)}
               </div>
               <div className="text-xs text-gray-400">
-                Жұмыс істеу уақыты: 8:00 - 20:00
+                Жұмыс күндері 15:00 - 20:00
+                <br />
+                Демалыс күндері 9:00 - 20:00
               </div>
             </div>
           </div>
@@ -730,7 +769,7 @@ export function TimeTable() {
               >
                 <div className="w-12 h-1 bg-gray-200 dark:bg-zinc-700 rounded-full mx-auto mb-6" />
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">Жаңа жазылым</h3>
                     <Button
@@ -772,6 +811,24 @@ export function TimeTable() {
                             {beds.map((bed) => (
                               <SelectItem key={bed} value={bed}>
                                 Орын {selectedRoom}-{bed}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedRoom && selectedBed && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Режим</label>
+                        <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
+                          <SelectTrigger className="w-full h-12 dark:bg-zinc-800 dark:border-zinc-700">
+                            <SelectValue placeholder="Режимді таңдаңыз" />
+                          </SelectTrigger>
+                          <SelectContent side="top">
+                            {Object.entries(WASH_MODES).map(([key, { name }]) => (
+                              <SelectItem key={key} value={key}>
+                                {name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -826,22 +883,6 @@ export function TimeTable() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Режим</label>
-                      <Select value={selectedMode} onValueChange={(value: keyof typeof WASH_MODES) => setSelectedMode(value)}>
-                        <SelectTrigger className="w-full dark:border-zinc-700">
-                          <SelectValue placeholder="Режимді таңдаңыз" />
-                        </SelectTrigger>
-                        <SelectContent side="top">
-                          {Object.entries(WASH_MODES).map(([key, { name }]) => (
-                            <SelectItem key={key} value={key}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     {/* Кнопки внизу формы */}
