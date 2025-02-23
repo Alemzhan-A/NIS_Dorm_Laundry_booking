@@ -36,7 +36,7 @@ export default async function FloorPage({ params }: PageProps) {
           <TimeTable floor={floor} />
         </div>
       </main>
-      <footer className="absolute bottom-0 w-full py-4 text-center text-sm text-gray-400">
+      <footer className="absolute bottom-0 w-full py-2 text-center text-sm text-gray-400">
         made by alemzhqn
       </footer>
     </div>
