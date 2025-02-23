@@ -26,17 +26,26 @@ import { getKazakhstanTime, formatKazakhstanTime } from "@/lib/date";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const WASH_MODES = {
-  delicate: { name: "Деликатная", duration: 75 },
-  quick: { name: "Быстрая 30", duration: 35 },
+  delicate: { name: "Деликатная", duration: 70 },
+  quick: { name: "Быстрая 30", duration: 40 },
 };
 
 const BOOKING_COLORS = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#96CEB4",
-  "#FFD93D",
-  "#FF8E9E",
+  "#FF6B6B",  // красный
+  "#4ECDC4",  // бирюзовый
+  "#45B7D1",  // голубой
+  "#96CEB4",  // мятный
+  "#FFD93D",  // желтый
+  "#FF8E9E",  // розовый
+  "#7D5FFF",  // фиолетовый
+  "#34D399",  // изумрудный
+  "#FB923C",  // оранжевый
+  "#93C5FD",  // светло-синий
+  "#A78BFA",  // лавандовый
+  "#FCA5A5",  // лососевый
+  "#2DD4BF",  // бирюзовый-2
+  "#FBB724",  // янтарный
+  "#8B5CF6",  // индиго
 ];
 
 const WORKING_HOURS = {
@@ -46,13 +55,14 @@ const WORKING_HOURS = {
 
 // Добавим тип для сырых данных с сервера
 interface BookingFromServer {
-  _id: string;           // MongoDB ID
-  roomBed: string;       // "301-1"
-  startTime: string;     // ISO string
-  endTime: string;       // ISO string
+  _id: string;
+  roomBed: string;
+  startTime: string;
+  endTime: string;
   mode: keyof typeof WASH_MODES;
   color: string;
-  createdAt: string;     // ISO string
+  createdAt: string;
+  floor: number;
 }
 
 interface Booking {
@@ -63,9 +73,15 @@ interface Booking {
   mode: keyof typeof WASH_MODES;
   color: string;
   createdAt: Date;
+  floor: number;
 }
 
-export function TimeTable() {
+// Обновим пропсы компонента
+interface TimeTableProps {
+  floor: number;
+}
+
+export function TimeTable({ floor }: TimeTableProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedMode, setSelectedMode] = useState<keyof typeof WASH_MODES>("quick");
   const [selectedHour, setSelectedHour] = useState("08");
@@ -83,7 +99,7 @@ export function TimeTable() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const response = await fetch('/api/bookings');
+        const response = await fetch(`/api/bookings?floor=${floor}`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         const parsedBookings = data.map((booking: BookingFromServer) => ({
@@ -93,7 +109,8 @@ export function TimeTable() {
           endTime: new Date(booking.endTime),
           mode: booking.mode,
           color: booking.color,
-          createdAt: new Date(booking.createdAt)
+          createdAt: new Date(booking.createdAt),
+          floor: booking.floor
         }));
         setBookings(parsedBookings);
       } catch (error) {
@@ -102,7 +119,7 @@ export function TimeTable() {
     };
 
     fetchBookings();
-  }, []);
+  }, [floor]);
 
   // Обновляем текущее время каждую минуту
   useEffect(() => {
@@ -117,7 +134,10 @@ export function TimeTable() {
   const yesterday = subDays(today, 1);
   const twoDaysAgo = subDays(today, 2);
 
-  const rooms = Array.from({ length: 12 }, (_, i) => (301 + i).toString());
+  const rooms = Array.from(
+    { length: 12 },
+    (_, i) => ((floor * 100) + 1 + i).toString()
+  );
   const beds = Array.from({ length: 4 }, (_, i) => (i + 1).toString());
 
   const getDateBySelection = (selection: typeof selectedDate) => {
@@ -208,6 +228,7 @@ export function TimeTable() {
       mode: selectedMode,
       color: getRandomColor(),
       createdAt: new Date(),
+      floor: floor
     };
 
     try {
@@ -223,10 +244,13 @@ export function TimeTable() {
 
       const savedBooking = await response.json();
 
-      setBookings([...bookings, {
-        ...newBooking,
-        id: savedBooking._id
-      }]);
+      setBookings(prevBookings => [
+        ...prevBookings.filter(b => b.floor === floor),
+        {
+          ...newBooking,
+          id: savedBooking._id
+        }
+      ]);
 
       if (isBookingFormOpen) {
         setIsBookingFormOpen(false);
@@ -296,7 +320,7 @@ export function TimeTable() {
 
         // Проверяем, что стирка закончится до закрытия
         if (proposedEndTime.getHours() >= WORKING_HOURS.end) {
-          setAlertMessage("Бүгінге бос орын жоқ");
+          setAlertMessage("Бүгінге бос уақыт жоқ");
           setShowAlert(true);
           return;
         }
@@ -324,14 +348,14 @@ export function TimeTable() {
     }
 
     // Если не нашли свободных слотов
-    setAlertMessage("Бүгінге бос орын жоқ");
+    setAlertMessage("Бүгінге бос уақыт жоқ");
     setShowAlert(true);
   };
 
   const sortedBookings = [...bookings]
     .filter(booking =>
-      isSameDay(booking.startTime, today) ||
-      isSameDay(booking.startTime, yesterday)
+      booking.floor === floor && // Фильтр по этажу
+      (isSameDay(booking.startTime, getDateBySelection(selectedDate)))
     )
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
@@ -601,37 +625,34 @@ export function TimeTable() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (selectedDate === 'today') setSelectedDate('yesterday');
-                    else if (selectedDate === 'yesterday') setSelectedDate('twoDaysAgo');
-                  }}
-                  className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'today' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
-                    }`}
-                  disabled={selectedDate === 'twoDaysAgo'}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedDate(prev => {
+                    if (prev === 'today') return 'yesterday';
+                    if (prev === 'yesterday') return 'twoDaysAgo';
+                    return 'today';
+                  })}
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <h4 className="text-base font-medium">
-                  {getDateTitle(selectedDate)}
-                </h4>
-                <button
-                  onClick={() => {
-                    if (selectedDate === 'twoDaysAgo') setSelectedDate('yesterday');
-                    else if (selectedDate === 'yesterday') setSelectedDate('today');
-                  }}
-                  className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${selectedDate !== 'twoDaysAgo' ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'
-                    }`}
-                  disabled={selectedDate === 'today'}
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <h3 className="text-lg font-semibold">{getDateTitle(selectedDate)}</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedDate(prev => {
+                    if (prev === 'twoDaysAgo') return 'yesterday';
+                    if (prev === 'yesterday') return 'today';
+                    return 'twoDaysAgo';
+                  })}
                 >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <ThemeToggle />
               <div className="text-sm text-gray-500">
-                {formatKazakhstanTime(currentTime)}
+                Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
               </div>
               <div className="text-xs text-gray-400">
                 Жұмыс күндері 15:00 - 20:00

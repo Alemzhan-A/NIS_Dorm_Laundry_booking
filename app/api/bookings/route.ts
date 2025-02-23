@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 
 // GET /api/bookings
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const floor = parseInt(searchParams.get('floor') || '1');
+
     const client = await clientPromise;
     const db = client.db("laundry");
 
-    // Получаем все бронирования и сортируем по времени начала
     const bookings = await db
       .collection("bookings")
-      .find({})
+      .find({ floor: floor })
       .sort({ startTime: 1 })
       .toArray();
 
@@ -28,14 +30,15 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db("laundry");
 
-    // Сохраняем бронирование
+    // Убедимся, что floor сохраняется как число
     const result = await db.collection("bookings").insertOne({
-      roomBed: booking.roomBed,        // "301-1"
-      startTime: new Date(booking.startTime).toISOString(),  // время начала
-      endTime: new Date(booking.endTime).toISOString(),      // время окончания
-      mode: booking.mode,              // "quick" или "delicate"
-      color: booking.color,            // цвет для отображения
-      createdAt: new Date().toISOString() // когда было создано бронирование
+      roomBed: booking.roomBed,
+      startTime: new Date(booking.startTime).toISOString(),
+      endTime: new Date(booking.endTime).toISOString(),
+      mode: booking.mode,
+      color: booking.color,
+      floor: parseInt(booking.floor), // Преобразуем в число
+      createdAt: new Date().toISOString()
     });
 
     return NextResponse.json({
