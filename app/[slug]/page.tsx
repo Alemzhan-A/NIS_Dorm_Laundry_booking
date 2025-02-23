@@ -32,7 +32,9 @@ export default async function FloorPage({ params }: PageProps) {
         <div className="text-sm text-gray-400 text-center mb-8">
           Баг жайлы хабарлау: <a href="https://t.me/Worb1K" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@Worb1K</a>
         </div>
-        <TimeTable floor={floor} />
+        <div className="max-w-5xl mx-auto">
+          <TimeTable floor={floor} />
+        </div>
       </main>
       <footer className="absolute bottom-0 w-full py-4 text-center text-sm text-gray-400">
         made by alemzhqn
