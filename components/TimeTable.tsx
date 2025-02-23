@@ -650,15 +650,18 @@ export function TimeTable({ floor }: TimeTableProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-sm text-gray-500">
-                Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <div className="text-sm text-gray-500">
+                  Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Жұмыс күндері 15:00 - 20:00
+                  <br />
+                  Демалыс күндері 9:00 - 20:00
+                </div>
               </div>
-              <div className="text-xs text-gray-400">
-                Жұмыс күндері 15:00 - 20:00
-                <br />
-                Демалыс күндері 9:00 - 20:00
-              </div>
+              <ThemeToggle />
             </div>
           </div>
 
