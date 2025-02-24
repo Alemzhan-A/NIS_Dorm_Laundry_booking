@@ -868,21 +868,14 @@ export function TimeTable({ floor }: TimeTableProps) {
                       </div>
                     )}
 
-                    <Button
-                      onClick={findNextAvailableTime}
-                      variant="outline"
-                      className="w-full h-12 text-base dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-zinc-700"
-                    >
-                      Жақын арадағы бос уақыт
-                    </Button>
-
                     <div>
                       <label className="block text-sm font-medium mb-2">Басталу уақыты</label>
                       <div className="flex gap-2">
                         <Select value={selectedHour} onValueChange={setSelectedHour}>
                           <SelectTrigger
-                            className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                              }`}
+                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${
+                              isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                            }`}
                           >
                             <SelectValue placeholder="Час" />
                           </SelectTrigger>
@@ -897,8 +890,9 @@ export function TimeTable({ floor }: TimeTableProps) {
                         <span className="flex items-center">:</span>
                         <Select value={selectedMinute} onValueChange={setSelectedMinute}>
                           <SelectTrigger
-                            className={`w-[120px] transition-all duration-300 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                              }`}
+                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${
+                              isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                            }`}
                           >
                             <SelectValue placeholder="Минуты" />
                           </SelectTrigger>
@@ -921,13 +915,13 @@ export function TimeTable({ floor }: TimeTableProps) {
                     <div className="flex gap-2 sticky bottom-0 pt-4 bg-white dark:bg-zinc-800">
                       <Button
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 h-12 text-base font-medium dark:border-zinc-700 dark:hover:bg-zinc-700"
                         onClick={() => setIsBookingFormOpen(false)}
                       >
                         Болдырмау
                       </Button>
                       <Button
-                        className="flex-1"
+                        className="flex-1 h-12 text-base font-medium hover:opacity-90"
                         onClick={() => {
                           handleAddBooking();
                           setIsBookingFormOpen(false);

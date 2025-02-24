@@ -24,7 +24,7 @@ export default async function FloorPage({ params }: PageProps) {
   const floor = parseInt(slug);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-black dark:to-black relative">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-[#121212] dark:to-[#121212] relative">
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-center mb-2">
           {floor} қабат - Кір жууға жазылу
