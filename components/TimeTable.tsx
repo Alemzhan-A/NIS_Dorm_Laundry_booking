@@ -50,7 +50,7 @@ const BOOKING_COLORS = [
 
 const WORKING_HOURS = {
   start: 8,  // 8:00
-  end: 20,   // 20:00
+  end: 21,
 };
 
 // Добавим тип для сырых данных с сервера
