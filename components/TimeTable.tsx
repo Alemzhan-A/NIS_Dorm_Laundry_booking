@@ -538,14 +538,14 @@ export function TimeTable({ floor }: TimeTableProps) {
               <div className="relative h-[1000px] bg-gray-50 dark:bg-zinc-950/50">
                 {/* Горизонтальные разделители для часов */}
                 <div className="absolute inset-0 left-20">
-                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+                  {Array.from({ length: 13 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
                       className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
-                        } ${index === 13 ? 'border-b-0' : ''
+                        } ${index === 12 ? 'border-b-0' : ''
                         }`}
                       style={{
-                        top: `${(index * 100) / 14}%`,
+                        top: `${(index * 100) / 13}%`,
                       }}
                     />
                   ))}
@@ -553,15 +553,15 @@ export function TimeTable({ floor }: TimeTableProps) {
 
                 {/* Временная шкала слева */}
                 <div className="absolute left-0 top-0 bottom-0 w-20">
-                  {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+                  {Array.from({ length: 13 }, (_, i) => i + 8).map((hour, index) => (
                     <div
                       key={hour}
                       className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
-                        } ${index === 13 ? 'border-b-0' : ''
+                        } ${index === 12 ? 'border-b-0' : ''
                         }`}
                       style={{
-                        top: `${(index * 100) / 14}%`,
-                        height: `${100 / 14}%`,
+                        top: `${(index * 100) / 13}%`,
+                        height: `${100 / 13}%`,
                       }}
                     >
                       <div className="absolute inset-0 flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400">
@@ -582,7 +582,7 @@ export function TimeTable({ floor }: TimeTableProps) {
                       const startMinute = booking.startTime.getMinutes();
                       const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                      const totalMinutesInDay = 14 * 60;
+                      const totalMinutesInDay = 13 * 60;
                       const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
                       const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
                       const height = (durationMinutes / totalMinutesInDay) * 100;
@@ -597,7 +597,8 @@ export function TimeTable({ floor }: TimeTableProps) {
                             top: `${startPosition}%`,
                             height: `${height}%`,
                             backgroundColor: `${booking.color}D9`,
-                            zIndex: 10
+                            zIndex: 10,
+                            minHeight: "2.5rem"
                           }}
                         >
                           <div className="p-3 h-full flex items-center">
@@ -669,14 +670,14 @@ export function TimeTable({ floor }: TimeTableProps) {
           <div className="relative h-[1000px] bg-gray-50 dark:bg-zinc-950/50 rounded-lg">
             {/* Горизонтальные разделители для часов */}
             <div className="absolute inset-0 left-20">
-              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+              {Array.from({ length: 13 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
                   className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
-                    } ${index === 13 ? 'border-b-0' : ''
+                    } ${index === 12 ? 'border-b-0' : ''
                     }`}
                   style={{
-                    top: `${(index * 100) / 14}%`,
+                    top: `${(index * 100) / 13}%`,
                   }}
                 />
               ))}
@@ -684,15 +685,15 @@ export function TimeTable({ floor }: TimeTableProps) {
 
             {/* Временная шкала слева */}
             <div className="absolute left-0 top-0 bottom-0 w-20">
-              {Array.from({ length: 14 }, (_, i) => i + 8).map((hour, index) => (
+              {Array.from({ length: 13 }, (_, i) => i + 8).map((hour, index) => (
                 <div
                   key={hour}
                   className={`absolute w-full border-t border-gray-200 dark:border-zinc-800 ${index === 0 ? 'border-t-0' : ''
-                    } ${index === 13 ? 'border-b-0' : ''
+                    } ${index === 12 ? 'border-b-0' : ''
                     }`}
                   style={{
-                    top: `${(index * 100) / 14}%`,
-                    height: `${100 / 14}%`,
+                    top: `${(index * 100) / 13}%`,
+                    height: `${100 / 13}%`,
                   }}
                 >
                   <div className="absolute inset-0 flex items-center justify-end px-4 text-sm text-gray-500 dark:text-zinc-400">
@@ -713,7 +714,7 @@ export function TimeTable({ floor }: TimeTableProps) {
                   const startMinute = booking.startTime.getMinutes();
                   const durationMinutes = WASH_MODES[booking.mode].duration;
 
-                  const totalMinutesInDay = 14 * 60;
+                  const totalMinutesInDay = 13 * 60;
                   const startMinutesFromEight = ((startHour - 8) * 60) + startMinute;
                   const startPosition = (startMinutesFromEight / totalMinutesInDay) * 100;
                   const height = (durationMinutes / totalMinutesInDay) * 100;
@@ -873,9 +874,8 @@ export function TimeTable({ floor }: TimeTableProps) {
                       <div className="flex gap-2">
                         <Select value={selectedHour} onValueChange={setSelectedHour}>
                           <SelectTrigger
-                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${
-                              isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                            }`}
+                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                              }`}
                           >
                             <SelectValue placeholder="Час" />
                           </SelectTrigger>
@@ -890,9 +890,8 @@ export function TimeTable({ floor }: TimeTableProps) {
                         <span className="flex items-center">:</span>
                         <Select value={selectedMinute} onValueChange={setSelectedMinute}>
                           <SelectTrigger
-                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${
-                              isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
-                            }`}
+                            className={`w-[120px] transition-all duration-300 dark:border-zinc-700 ${isTimeHighlighted ? 'ring-2 ring-offset-2 ring-primary animate-pulse' : ''
+                              }`}
                           >
                             <SelectValue placeholder="Минуты" />
                           </SelectTrigger>
