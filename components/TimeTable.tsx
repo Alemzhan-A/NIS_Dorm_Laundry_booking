@@ -53,7 +53,6 @@ const WORKING_HOURS = {
   end: 21,
 };
 
-// Добавим тип для сырых данных с сервера
 interface BookingFromServer {
   _id: string;
   roomBed: string;
@@ -63,6 +62,7 @@ interface BookingFromServer {
   color: string;
   createdAt: string;
   floor: number;
+  password: string;
 }
 
 interface Booking {
@@ -74,6 +74,7 @@ interface Booking {
   color: string;
   createdAt: Date;
   floor: number;
+  password: string;
 }
 
 // Обновим пропсы компонента
@@ -94,6 +95,10 @@ export function TimeTable({ floor }: TimeTableProps) {
   const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday' | 'twoDaysAgo'>('today');
   const [currentTime, setCurrentTime] = useState(getKazakhstanTime());
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [selectedPassword, setSelectedPassword] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
 
   // Загружаем бронирования при монтировании
   useEffect(() => {
@@ -110,7 +115,8 @@ export function TimeTable({ floor }: TimeTableProps) {
           mode: booking.mode,
           color: booking.color,
           createdAt: new Date(booking.createdAt),
-          floor: booking.floor
+          floor: booking.floor,
+          password: booking.password
         }));
         setBookings(parsedBookings);
       } catch (error) {
@@ -165,6 +171,12 @@ export function TimeTable({ floor }: TimeTableProps) {
   const handleAddBooking = async () => {
     if (!selectedRoom || !selectedBed) {
       setAlertMessage("Бөлме мен орынды таңдаңыз");
+      setShowAlert(true);
+      return;
+    }
+
+    if (!selectedPassword) {
+      setAlertMessage("Құпия сөзді енгізіңіз");
       setShowAlert(true);
       return;
     }
@@ -228,7 +240,8 @@ export function TimeTable({ floor }: TimeTableProps) {
       mode: selectedMode,
       color: getRandomColor(),
       createdAt: new Date(),
-      floor: floor
+      floor: floor,
+      password: selectedPassword
     };
 
     try {
@@ -350,6 +363,35 @@ export function TimeTable({ floor }: TimeTableProps) {
     // Если не нашли свободных слотов
     setAlertMessage("Бүгінге бос уақыт жоқ");
     setShowAlert(true);
+  };
+
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete) return;
+
+    try {
+      const response = await fetch(`/api/bookings?id=${bookingToDelete.id}&password=${deletePassword}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setAlertMessage("Қате құпия сөз");
+        } else {
+          setAlertMessage("Жазылымды жою кезінде қате шықты");
+        }
+        setShowAlert(true);
+        return;
+      }
+
+      setBookings(prevBookings => prevBookings.filter(b => b.id !== bookingToDelete.id));
+      setShowDeleteDialog(false);
+      setDeletePassword("");
+      setBookingToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete booking:', error);
+      setAlertMessage("Жазылымды жою кезінде қате шықты");
+      setShowAlert(true);
+    }
   };
 
   const sortedBookings = [...bookings]
@@ -493,6 +535,20 @@ export function TimeTable({ floor }: TimeTableProps) {
                 </div>
               </div>
 
+              {/* Добавляем поле для пароля в форму бронирования */}
+              {selectedRoom && selectedBed && selectedMode && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Құпия сөз</label>
+                  <input
+                    type="password"
+                    value={selectedPassword}
+                    onChange={(e) => setSelectedPassword(e.target.value)}
+                    className="w-full h-12 px-3 rounded-md border border-gray-200 dark:border-zinc-700 dark:bg-zinc-800"
+                    placeholder="Құпия сөзді енгізіңіз"
+                  />
+                </div>
+              )}
+
               <Button
                 onClick={handleAddBooking}
                 className="w-full h-12 text-base"
@@ -601,7 +657,7 @@ export function TimeTable({ floor }: TimeTableProps) {
                             minHeight: "2.5rem"
                           }}
                         >
-                          <div className="p-3 h-full flex items-center">
+                          <div className="p-3 h-full flex items-center justify-between">
                             <div className="text-sm flex items-center gap-3 whitespace-nowrap overflow-hidden">
                               <span className="font-medium">{booking.roomBed}</span>
                               <span className="h-4 w-px bg-gray-300 dark:bg-zinc-700"></span>
@@ -609,6 +665,15 @@ export function TimeTable({ floor }: TimeTableProps) {
                               <span className="h-4 w-px bg-gray-300 dark:bg-zinc-700"></span>
                               <span>{WASH_MODES[booking.mode].name}</span>
                             </div>
+                            <button
+                              onClick={() => {
+                                setBookingToDelete(booking);
+                                setShowDeleteDialog(true);
+                              }}
+                              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
                         </motion.div>
                       );
@@ -733,7 +798,7 @@ export function TimeTable({ floor }: TimeTableProps) {
                         minHeight: "2.5rem"
                       }}
                     >
-                      <div className="p-2 h-full flex items-center">
+                      <div className="p-2 h-full flex items-center justify-between">
                         <div className="text-xs flex items-center gap-2 whitespace-nowrap overflow-hidden">
                           <span className="font-medium">{booking.roomBed}</span>
                           <span className="h-3 w-px bg-gray-300 dark:bg-zinc-700"></span>
@@ -741,6 +806,15 @@ export function TimeTable({ floor }: TimeTableProps) {
                           <span className="h-3 w-px bg-gray-300 dark:bg-zinc-700"></span>
                           <span>{WASH_MODES[booking.mode].name}</span>
                         </div>
+                        <button
+                          onClick={() => {
+                            setBookingToDelete(booking);
+                            setShowDeleteDialog(true);
+                          }}
+                          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     </motion.div>
                   );
@@ -910,6 +984,20 @@ export function TimeTable({ floor }: TimeTableProps) {
                       </div>
                     </div>
 
+                    {/* Добавляем поле для пароля в форму бронирования */}
+                    {selectedRoom && selectedBed && selectedMode && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Құпия сөз</label>
+                        <input
+                          type="password"
+                          value={selectedPassword}
+                          onChange={(e) => setSelectedPassword(e.target.value)}
+                          className="w-full h-12 px-3 rounded-md border border-gray-200 dark:border-zinc-700 dark:bg-zinc-800"
+                          placeholder="Құпия сөзді енгізіңіз"
+                        />
+                      </div>
+                    )}
+
                     {/* Кнопки внизу формы */}
                     <div className="flex gap-2 sticky bottom-0 pt-4 bg-white dark:bg-zinc-800">
                       <Button
@@ -917,7 +1005,7 @@ export function TimeTable({ floor }: TimeTableProps) {
                         className="flex-1 h-12 text-base font-medium dark:border-zinc-700 dark:hover:bg-zinc-700"
                         onClick={() => setIsBookingFormOpen(false)}
                       >
-                        Болдырмау
+                        Отмена
                       </Button>
                       <Button
                         className="flex-1 h-12 text-base font-medium hover:opacity-90"
@@ -947,6 +1035,35 @@ export function TimeTable({ floor }: TimeTableProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Добавляем диалог удаления */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Жазылымды жою</AlertDialogTitle>
+            <AlertDialogDescription>
+              Жазылымды жою үшін құпия сөзді енгізіңіз
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              className="w-full h-12 px-3 rounded-md border border-gray-200 dark:border-zinc-700 dark:bg-zinc-800"
+              placeholder="Құпия сөзді енгізіңіз"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowDeleteDialog(false)}>
+              Отмена
+            </AlertDialogAction>
+            <Button onClick={handleDeleteBooking}>
+              Жою
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
