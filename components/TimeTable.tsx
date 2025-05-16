@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { ChevronLeft, ChevronRight, PlusIcon, X } from "lucide-react";
-import { getKazakhstanTime, formatKazakhstanTime } from "@/lib/date";
+import { getKazakhstanTime} from "@/lib/date";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const WASH_MODES = {
@@ -93,7 +93,6 @@ export function TimeTable({ floor }: TimeTableProps) {
   const [alertMessage, setAlertMessage] = useState("");
   const [isTimeHighlighted, setIsTimeHighlighted] = useState(false);
   const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday' | 'twoDaysAgo'>('today');
-  const [currentTime, setCurrentTime] = useState(getKazakhstanTime());
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [selectedPassword, setSelectedPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
@@ -127,14 +126,6 @@ export function TimeTable({ floor }: TimeTableProps) {
     fetchBookings();
   }, [floor]);
 
-  // Обновляем текущее время каждую минуту
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(getKazakhstanTime());
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   const today = getKazakhstanTime();
   const yesterday = subDays(today, 1);
