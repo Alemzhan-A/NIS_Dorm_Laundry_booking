@@ -412,9 +412,6 @@ export function TimeTable({ floor }: TimeTableProps) {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-end">
-                <div className="text-sm text-gray-500">
-                  Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
-                </div>
                 <div className="text-xs text-gray-400">
                   Жұмыс күндері 15:00 - 20:00
                   <br />
@@ -718,9 +715,6 @@ export function TimeTable({ floor }: TimeTableProps) {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-end">
-                <div className="text-sm text-gray-500">
-                  Қазіргі уақыт: {formatKazakhstanTime(currentTime)}
-                </div>
                 <div className="text-xs text-gray-400">
                   Жұмыс күндері 15:00 - 20:00
                   <br />
@@ -1057,7 +1051,7 @@ export function TimeTable({ floor }: TimeTableProps) {
               placeholder="Құпия сөзді енгізіңіз"
             />
           </div>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2">
             <AlertDialogAction onClick={() => setShowDeleteDialog(false)}>
               Отмена
             </AlertDialogAction>
