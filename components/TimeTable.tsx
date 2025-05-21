@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { ChevronLeft, ChevronRight, PlusIcon, X } from "lucide-react";
-import { getKazakhstanTime} from "@/lib/date";
+import { getKazakhstanTime } from "@/lib/date";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const WASH_MODES = {
@@ -653,15 +653,17 @@ export function TimeTable({ floor }: TimeTableProps) {
                               <span className="h-4 w-px bg-gray-300 dark:bg-zinc-700"></span>
                               <span>{WASH_MODES[booking.mode].name}</span>
                             </div>
-                            <button
-                              onClick={() => {
-                                setBookingToDelete(booking);
-                                setShowDeleteDialog(true);
-                              }}
-                              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            {booking.endTime > getKazakhstanTime() && (
+                              <button
+                                onClick={() => {
+                                  setBookingToDelete(booking);
+                                  setShowDeleteDialog(true);
+                                }}
+                                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </motion.div>
                       );
@@ -791,15 +793,17 @@ export function TimeTable({ floor }: TimeTableProps) {
                           <span className="h-3 w-px bg-gray-300 dark:bg-zinc-700"></span>
                           <span>{WASH_MODES[booking.mode].name}</span>
                         </div>
-                        <button
-                          onClick={() => {
-                            setBookingToDelete(booking);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {booking.endTime > getKazakhstanTime() && (
+                          <button
+                            onClick={() => {
+                              setBookingToDelete(booking);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   );
